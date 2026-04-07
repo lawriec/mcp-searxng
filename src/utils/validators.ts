@@ -116,14 +116,7 @@ export function validateRegion(region: string): string {
 }
 
 export function getSearxngUrl(): string {
-  const url = process.env.SEARXNG_URL;
-  if (!url) {
-    throw new Error(
-      "SEARXNG_URL environment variable is not set. " +
-        "Set it to your SearXNG instance URL (e.g., http://localhost:8080). " +
-        "See the README for Docker setup instructions."
-    );
-  }
+  const url = process.env.SEARXNG_URL || "http://localhost:8080";
   const trimmed = url.trim().replace(/\/+$/, "");
   if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
     throw new Error(
