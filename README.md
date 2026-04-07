@@ -20,7 +20,7 @@ docker compose up -d
 
 This starts:
 - **SearXNG** on port 8080 with JSON API enabled and research-relevant engines activated
-- **Valkey** (Redis alternative) for SearXNG's built-in rate limiter
+- **Valkey** (Redis alternative) for SearXNG's caching and autocomplete
 
 Verify it's working:
 
@@ -50,7 +50,7 @@ After starting Docker, edit `docker/settings.yml` and change `secret_key` from `
 
 ## VPN Recommendation
 
-Self-hosting means your IP is directly visible to upstream search engines (Google, Bing, etc.) when SearXNG queries them. While the built-in rate limiter helps, **strongly recommend**:
+Self-hosting means your IP is directly visible to upstream search engines (Google, Bing, etc.) when SearXNG queries them. **Strongly recommend**:
 
 - Route SearXNG's outgoing traffic through a **VPN** (add a VPN container to `docker-compose.yml`)
 - Or host SearXNG on a **cloud server** with a non-residential IP
@@ -182,6 +182,7 @@ See [SearXNG engine docs](https://docs.searxng.org/admin/settings/settings_engin
 |-------|-------|-----|
 | "Cannot connect to SearXNG" | Docker container not running | `cd docker && docker compose up -d` |
 | "SearXNG returned 403" | JSON format not enabled | Add `json` to `search.formats` in `settings.yml`, restart |
+| "SearXNG returned 429" | Rate limiter blocking API clients | Set `server.limiter: false` in `settings.yml`, restart. The MCP server has its own rate limiter. |
 | "SearXNG request timed out" | Instance overloaded or engine slow | Check `docker logs searxng`, increase `SEARXNG_TIMEOUT_MS` |
 | "SearXNG returned invalid JSON" | HTML returned instead of JSON | Verify JSON is enabled: `curl "http://localhost:8080/search?q=test&format=json"` |
 | No results from Google | Google rate-limiting the instance | Use Brave/Bing instead, or wait and try again. Consider VPN. |

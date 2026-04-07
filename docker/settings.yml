@@ -1,14 +1,11 @@
-use_default_settings:
-  engines:
-    remove:
-      - yandex            # Broken API — removed from SearXNG
+use_default_settings: true
 
 general:
   instance_name: "Lost Media SearXNG"
 
 server:
   secret_key: "change-me-on-first-run"
-  limiter: true           # Protects against accidentally hammering upstream engines
+  limiter: false          # Disabled — MCP server has its own rate limiter; SearXNG's limiter blocks API clients
   public_instance: false
 
 valkey:
