@@ -44,6 +44,14 @@ find_auth_file() {
     echo "$config_dir/default.auth"
     return
   fi
+
+  # Parent-directory default auth (for region subfolders inheriting root auth)
+  local parent_dir
+  parent_dir="$(dirname "$config_dir")"
+  if [ "$parent_dir" != "$config_dir" ] && [ -f "$parent_dir/default.auth" ]; then
+    echo "$parent_dir/default.auth"
+    return
+  fi
 }
 
 start_vpn() {

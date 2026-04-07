@@ -8,8 +8,9 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { handleSearch, handleEngines } from "./tools/index.js";
+import { handleSearch, handleEngines, handleVpnRegions } from "./tools/index.js";
 import type { SearchArgs } from "./tools/search.js";
+import { hasRegions } from "./utils/region-resolver.js";
 
 const server = new Server(
   { name: "searxng", version: "1.0.0" },
@@ -79,6 +80,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             description:
               "Safe search level: 0 (off), 1 (moderate), 2 (strict).",
           },
+          ...(hasRegions()
+            ? {
+                region: {
+                  type: "string",
+                  description:
+                    "VPN exit region for this search. Routes the query through a SearXNG instance " +
+                    "connected to a VPN in that region. Use searxng_vpn_regions to see available regions. " +
+                    "Useful for geo-filtered results (e.g. Google returns different results from UK vs Japan exit).",
+                },
+              }
+            : {}),
         },
         required: ["query"],
       },
@@ -95,6 +107,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {},
       },
     },
+    ...(hasRegions()
+      ? [
+          {
+            name: "searxng_vpn_regions",
+            description:
+              "List available VPN regions. Each region routes searches through a SearXNG instance " +
+              "connected to a VPN exit in that region. Use the region parameter on searxng_search " +
+              "to target a specific region.",
+            inputSchema: {
+              type: "object" as const,
+              properties: {},
+            },
+          },
+        ]
+      : []),
   ],
 }));
 
@@ -106,6 +133,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return handleSearch(args as unknown as SearchArgs);
     case "searxng_engines":
       return handleEngines();
+    case "searxng_vpn_regions":
+      return handleVpnRegions();
     default:
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
   }

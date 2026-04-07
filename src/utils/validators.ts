@@ -102,6 +102,19 @@ export function validateLanguage(lang: string): string {
   return trimmed;
 }
 
+export function validateRegion(region: string): string {
+  const trimmed = region.trim().toLowerCase();
+  if (!trimmed) {
+    throw new Error("region must not be empty");
+  }
+  if (!/^[a-z0-9_-]+$/.test(trimmed)) {
+    throw new Error(
+      `Invalid region: "${region}". Use lowercase letters, digits, hyphens, underscores.`
+    );
+  }
+  return trimmed;
+}
+
 export function getSearxngUrl(): string {
   const url = process.env.SEARXNG_URL;
   if (!url) {

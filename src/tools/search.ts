@@ -9,7 +9,9 @@ import {
   validateMaxResults,
   validateSafesearch,
   validateLanguage,
+  validateRegion,
 } from "../utils/validators.js";
+import { resolveRegionUrl } from "../utils/region-resolver.js";
 
 export interface SearchArgs {
   query: string;
@@ -20,6 +22,7 @@ export interface SearchArgs {
   pageno?: number;
   max_results?: number;
   safesearch?: number;
+  region?: string;
 }
 
 const DEFAULT_MAX_RESULTS = 20;
@@ -45,16 +48,13 @@ export async function handleSearch(args: SearchArgs): Promise<CallToolResult> {
       args.safesearch !== undefined
         ? validateSafesearch(args.safesearch)
         : undefined;
+    const region = args.region ? validateRegion(args.region) : undefined;
+    const baseUrlOverride = region ? resolveRegionUrl(region) : undefined;
 
-    const response = await searxngSearch({
-      query,
-      engines,
-      categories,
-      language,
-      time_range,
-      pageno,
-      safesearch,
-    });
+    const response = await searxngSearch(
+      { query, engines, categories, language, time_range, pageno, safesearch },
+      baseUrlOverride
+    );
 
     const truncated = response.results.slice(0, maxResults);
 
@@ -80,7 +80,9 @@ export async function handleSearch(args: SearchArgs): Promise<CallToolResult> {
       publishedDate: r.publishedDate || undefined,
     }));
 
-    let text = `Found ${truncated.length} result(s) via SearXNG (${engineList})`;
+    let text = `Found ${truncated.length} result(s) via SearXNG`;
+    if (region) text += ` (region: ${region})`;
+    text += ` (${engineList})`;
     if (response.number_of_results > truncated.length) {
       text += ` — ${response.number_of_results} total available`;
     }

@@ -55,9 +55,10 @@ export interface SearxngEngineInfo {
 // --- Search ---
 
 export async function searxngSearch(
-  params: SearxngSearchParams
+  params: SearxngSearchParams,
+  baseUrlOverride?: string
 ): Promise<SearxngSearchResponse> {
-  const baseUrl = getSearxngUrl();
+  const baseUrl = baseUrlOverride ?? getSearxngUrl();
 
   const searchParams = new URLSearchParams();
   searchParams.set("q", params.query);
@@ -161,8 +162,10 @@ interface SearxngConfigResponse {
   >;
 }
 
-export async function searxngEngines(): Promise<SearxngEngineInfo[]> {
-  const baseUrl = getSearxngUrl();
+export async function searxngEngines(
+  baseUrlOverride?: string
+): Promise<SearxngEngineInfo[]> {
+  const baseUrl = baseUrlOverride ?? getSearxngUrl();
   const timeoutMs = getTimeoutMs();
 
   let response: Response;
