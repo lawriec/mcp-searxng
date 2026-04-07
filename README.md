@@ -18,9 +18,7 @@ cd docker
 docker compose up -d
 ```
 
-This starts:
-- **SearXNG** on port 8080 with JSON API enabled and research-relevant engines activated
-- **Valkey** (Redis alternative) for SearXNG's caching and autocomplete
+This starts **SearXNG** on port 8080 with JSON API enabled and research-relevant engines activated.
 
 Verify it's working:
 
