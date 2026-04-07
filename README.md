@@ -149,6 +149,25 @@ cd docker
 ./rotate-vpn.sh ~/vpn-profiles
 ```
 
+### Choosing VPN Exit Region
+
+Your VPN exit region affects search results — particularly from Google, which geo-filters
+aggressively. Other engines (Brave, Mojeek, Startpage) are more consistent across regions.
+
+**Practical guidance:**
+- **Searching for British content?** Use a UK exit — Google returns more UK-specific results
+  (local forums, BBC references, UK-centric pages)
+- **Searching for Japanese/Asian content?** An Asian exit may surface regional results that
+  Western exits miss
+- **General research?** Region matters less — non-Google engines give similar results regardless
+- **Rate-limiting protection** is the primary value of VPN rotation, not result diversity.
+  Google may serve results from a UK exit but refuse them entirely from a Singapore exit
+  if that IP has been flagged
+
+When configuring `OPENVPN_PROFILE`, pick an exit region that matches your research target
+when possible. For rotation, having a mix of regions in your `.ovpn` folder gives the best
+coverage.
+
 ### Advanced: Multiple VPN Exits
 
 For zero-downtime IP rotation, you can run multiple VPN containers and configure SearXNG to
