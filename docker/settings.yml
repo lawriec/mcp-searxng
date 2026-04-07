@@ -1,0 +1,89 @@
+use_default_settings:
+  engines:
+    remove:
+      - yandex            # Broken API — removed from SearXNG
+
+general:
+  instance_name: "Lost Media SearXNG"
+
+server:
+  secret_key: "change-me-on-first-run"
+  limiter: true           # Protects against accidentally hammering upstream engines
+  public_instance: false
+
+valkey:
+  url: redis://searxng-valkey:6379/0
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json                # Required for MCP API access
+
+# Enable engines disabled by default that matter for lost media research.
+# All default-enabled engines (Google, Bing, Brave, DuckDuckGo, Wikipedia, etc.)
+# are inherited from use_default_settings. Below we enable additional engines.
+engines:
+  # -- General web --
+  - name: yahoo
+    disabled: false
+  - name: mojeek
+    disabled: false
+
+  # -- Files (all disabled by default) --
+  - name: anna's archive
+    disabled: false
+  - name: 1337x
+    disabled: false
+  - name: nyaa
+    disabled: false
+  - name: piratebay
+    disabled: false
+  - name: kickass
+    disabled: false
+
+  # -- Video (niche platforms) --
+  - name: bilibili
+    disabled: false
+  - name: niconico
+    disabled: false
+  - name: rumble
+    disabled: false
+  - name: peertube
+    disabled: false
+
+  # -- Social media --
+  - name: reddit
+    disabled: false
+  - name: lemmy
+    disabled: false
+  - name: mastodon
+    disabled: false
+
+  # -- Music --
+  - name: bandcamp
+    disabled: false
+  - name: soundcloud
+    disabled: false
+  - name: genius
+    disabled: false
+
+  # -- Science / Academic --
+  - name: arxiv
+    disabled: false
+  - name: crossref
+    disabled: false
+  - name: semantic scholar
+    disabled: false
+
+  # -- Regional --
+  - name: naver
+    disabled: false
+  - name: baidu
+    disabled: false
+
+  # -- Increase timeout for slow engines --
+  - name: google
+    timeout: 6.0
+  - name: google scholar
+    timeout: 6.0

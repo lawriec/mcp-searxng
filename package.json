@@ -1,0 +1,29 @@
+{
+  "name": "mcp-searxng",
+  "version": "1.0.0",
+  "description": "MCP server for multi-engine web search via a self-hosted SearXNG instance",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "mcp-searxng": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "start": "node build/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "build"
+  ],
+  "license": "MIT"
+}
