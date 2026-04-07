@@ -12,6 +12,7 @@ services:
     environment:
       - OVPN_FILE=/vpn/config/${OPENVPN_PROFILE:?Set OPENVPN_PROFILE to your .ovpn filename without extension}.ovpn
       - AUTH_FILE=${OPENVPN_AUTH_FILE:-}
+      - ROTATE_INTERVAL_MINS=${ROTATE_INTERVAL_MINS:-30}
 
   searxng:
     depends_on:

@@ -129,23 +129,25 @@ docker compose up -d
 
 ### VPN Rotation
 
-Switch to a different VPN server periodically to distribute your traffic across exit IPs.
+The VPN container automatically rotates to a random `.ovpn` profile from your config folder
+every 30 minutes (default). This distributes traffic across different exit IPs without any
+manual intervention.
 
-**Manual rotation** — pick a random profile and restart:
+**Change the interval** via environment variable:
+
+```bash
+export ROTATE_INTERVAL_MINS=60   # Rotate every hour
+export ROTATE_INTERVAL_MINS=0    # Disable rotation (stay on one profile)
+```
+
+During rotation (~15-30s), searches may fail briefly, then resume automatically.
+
+**Manual rotation** — if you want to rotate on-demand:
 
 ```bash
 cd docker
 ./rotate-vpn.sh ~/vpn-profiles
 ```
-
-**Automatic rotation** — add a cron job (e.g. every 30 minutes):
-
-```bash
-*/30 * * * * cd /path/to/mcp-searxng/docker && ./rotate-vpn.sh /path/to/vpn-profiles
-```
-
-The VPN container restarts with a new profile (~15-30s downtime). Searches during restart
-may fail briefly, then resume automatically.
 
 ### Advanced: Multiple VPN Exits
 
@@ -290,6 +292,7 @@ See [SearXNG engine docs](https://docs.searxng.org/admin/settings/settings_engin
 | `OPENVPN_CONFIG_DIR` | VPN only | — | Path to folder containing `.ovpn` profiles and optional `.auth` files |
 | `OPENVPN_PROFILE` | VPN only | — | Name of `.ovpn` file to use (without `.ovpn` extension) |
 | `OPENVPN_AUTH_FILE` | No | — | Override path to auth file inside container (auto-detected if omitted) |
+| `ROTATE_INTERVAL_MINS` | No | `30` | Minutes between automatic VPN profile rotation. Set to `0` to disable. |
 
 ## Troubleshooting
 
