@@ -1,6 +1,6 @@
 {
   "name": "mcp-searxng",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for multi-engine web search via a self-hosted SearXNG instance",
   "type": "module",
   "main": "build/index.js",
