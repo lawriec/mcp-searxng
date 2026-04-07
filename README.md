@@ -46,15 +46,129 @@ docker restart searxng
 
 After starting Docker, edit `docker/settings.yml` and change `secret_key` from `"change-me-on-first-run"` to a random string.
 
-## VPN Recommendation
+## VPN Setup (Optional)
 
-Self-hosting means your IP is directly visible to upstream search engines (Google, Bing, etc.) when SearXNG queries them. **Strongly recommend**:
+Self-hosting means your IP is directly visible to upstream search engines (Google, Bing, etc.)
+when SearXNG queries them. Routing SearXNG through a VPN protects your IP from being flagged
+during intensive research sessions.
 
-- Route SearXNG's outgoing traffic through a **VPN** (add a VPN container to `docker-compose.yml`)
-- Or host SearXNG on a **cloud server** with a non-residential IP
-- Or configure proxy rotation in SearXNG's `outgoing.proxies` setting
+**Without VPN, everything works normally.** VPN is strictly optional — skip this section if
+you don't need it.
 
-This protects your IP from being flagged by upstream engines during intensive research sessions.
+### How It Works
+
+A VPN container runs OpenVPN and exposes a SOCKS5 proxy. SearXNG routes all outgoing search
+requests through that proxy. Your local API access (MCP server → SearXNG) is unaffected —
+only SearXNG's upstream engine queries go through the VPN.
+
+### Prerequisites
+
+- OpenVPN config files (`.ovpn`) from your VPN provider — NordVPN, ExpressVPN, Surfshark,
+  ProtonVPN, Mullvad, etc. all provide these for download
+- If your provider requires username/password auth, create an auth file (see below)
+
+### Setup
+
+**1. Create a profiles folder** with your `.ovpn` files:
+
+```bash
+mkdir ~/vpn-profiles
+# Copy .ovpn files from your VPN provider into this folder
+cp ~/Downloads/*.ovpn ~/vpn-profiles/
+```
+
+**2. Set up auth** (if your provider requires it):
+
+Create a text file with username on line 1 and password on line 2:
+
+```bash
+# Shared auth for all profiles (most common):
+echo -e "your-username\nyour-password" > ~/vpn-profiles/default.auth
+
+# Or per-profile auth (overrides default for that profile):
+echo -e "your-username\nyour-password" > ~/vpn-profiles/us-east.auth
+```
+
+**3. Set environment variables:**
+
+```bash
+# Linux / macOS — add to shell profile
+export OPENVPN_CONFIG_DIR="$HOME/vpn-profiles"
+export OPENVPN_PROFILE="us-east"  # .ovpn filename without extension
+
+# Windows PowerShell
+$env:OPENVPN_CONFIG_DIR = "$HOME\vpn-profiles"
+$env:OPENVPN_PROFILE = "us-east"
+```
+
+**4. Start with VPN:**
+
+```bash
+cd docker
+docker compose -f docker-compose.yml -f docker-compose.vpn.yml up -d
+```
+
+**5. Verify** the VPN is working:
+
+```bash
+# Check exit IP (should show VPN server, not your real IP)
+docker exec searxng-vpn curl -s https://ipinfo.io/json
+
+# Test a search goes through VPN
+curl -s "http://localhost:8080/search?q=test&format=json" | head -c 200
+```
+
+### Starting Without VPN
+
+Same as before — VPN is completely ignored:
+
+```bash
+cd docker
+docker compose up -d
+```
+
+### VPN Rotation
+
+Switch to a different VPN server periodically to distribute your traffic across exit IPs.
+
+**Manual rotation** — pick a random profile and restart:
+
+```bash
+cd docker
+./rotate-vpn.sh ~/vpn-profiles
+```
+
+**Automatic rotation** — add a cron job (e.g. every 30 minutes):
+
+```bash
+*/30 * * * * cd /path/to/mcp-searxng/docker && ./rotate-vpn.sh /path/to/vpn-profiles
+```
+
+The VPN container restarts with a new profile (~15-30s downtime). Searches during restart
+may fail briefly, then resume automatically.
+
+### Advanced: Multiple VPN Exits
+
+For zero-downtime IP rotation, you can run multiple VPN containers and configure SearXNG to
+round-robin across them. Edit `docker-compose.vpn.yml` to add more VPN services (vpn1, vpn2,
+etc.), each with a different `OPENVPN_PROFILE`, and list all their SOCKS5 endpoints in
+`settings-vpn.yml` under `outgoing.proxies`. SearXNG distributes requests across them
+automatically and retries on a different proxy if one fails.
+
+### Alternatives to VPN
+
+- **Cloud server**: Host SearXNG on a VPS with a non-residential IP (DigitalOcean, Hetzner, etc.)
+- **Commercial proxy**: Configure SearXNG's `outgoing.proxies` with a SOCKS5/HTTP proxy service
+
+### VPN Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| VPN container won't start | Check `.ovpn` file path, auth file format, Docker has `NET_ADMIN` capability |
+| "TUN device not available" | Ensure Docker can access `/dev/net/tun` — may need `--device /dev/net/tun` |
+| Tunnel times out | VPN server may be down — try a different `.ovpn` profile |
+| Searches fail after enabling VPN | Check VPN container is healthy: `docker logs searxng-vpn` |
+| Slow searches | VPN adds latency. `settings-vpn.yml` has `request_timeout: 10.0` — increase if needed |
 
 ## Installation
 
@@ -173,6 +287,9 @@ See [SearXNG engine docs](https://docs.searxng.org/admin/settings/settings_engin
 | `SEARXNG_URL` | Yes | — | URL of your SearXNG instance (e.g. `http://localhost:8080`) |
 | `SEARXNG_MIN_INTERVAL_MS` | No | `2000` | Minimum milliseconds between requests to SearXNG |
 | `SEARXNG_TIMEOUT_MS` | No | `30000` | HTTP request timeout in milliseconds |
+| `OPENVPN_CONFIG_DIR` | VPN only | — | Path to folder containing `.ovpn` profiles and optional `.auth` files |
+| `OPENVPN_PROFILE` | VPN only | — | Name of `.ovpn` file to use (without `.ovpn` extension) |
+| `OPENVPN_AUTH_FILE` | No | — | Override path to auth file inside container (auto-detected if omitted) |
 
 ## Troubleshooting
 

@@ -1,0 +1,21 @@
+services:
+  vpn:
+    build: ./vpn
+    container_name: searxng-vpn
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    volumes:
+      - ${OPENVPN_CONFIG_DIR:?Set OPENVPN_CONFIG_DIR to your .ovpn profiles folder}:/vpn/config:ro
+    environment:
+      - OVPN_FILE=/vpn/config/${OPENVPN_PROFILE:?Set OPENVPN_PROFILE to your .ovpn filename without extension}.ovpn
+      - AUTH_FILE=${OPENVPN_AUTH_FILE:-}
+
+  searxng:
+    depends_on:
+      vpn:
+        condition: service_started
+    volumes:
+      - ./settings-vpn.yml:/etc/searxng/settings.yml:ro
