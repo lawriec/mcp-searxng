@@ -10,7 +10,7 @@ services:
     volumes:
       - ${OPENVPN_CONFIG_DIR:?Set OPENVPN_CONFIG_DIR to your .ovpn profiles folder}:/vpn/config:ro
     environment:
-      - OVPN_FILE=/vpn/config/${OPENVPN_PROFILE:?Set OPENVPN_PROFILE to your .ovpn filename without extension}.ovpn
+      - OVPN_FILE=${OPENVPN_PROFILE:+/vpn/config/${OPENVPN_PROFILE}.ovpn}
       - AUTH_FILE=${OPENVPN_AUTH_FILE:-}
       - ROTATE_INTERVAL_MINS=${ROTATE_INTERVAL_MINS:-30}
 

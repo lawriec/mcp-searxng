@@ -1,14 +1,18 @@
 #!/bin/bash
 set -e
 
-if [ -z "$OVPN_FILE" ]; then
-  echo "ERROR: OVPN_FILE environment variable not set"
-  exit 1
-fi
-
-if [ ! -f "$OVPN_FILE" ]; then
-  echo "ERROR: OpenVPN config not found: $OVPN_FILE"
-  exit 1
+# Auto-detect .ovpn file if not set or not found
+if [ -z "$OVPN_FILE" ] || [ ! -f "$OVPN_FILE" ]; then
+  shopt -s nullglob
+  ovpn_candidates=(/vpn/config/*.ovpn)
+  shopt -u nullglob
+  if [ ${#ovpn_candidates[@]} -gt 0 ]; then
+    OVPN_FILE="${ovpn_candidates[0]}"
+    echo "Auto-detected OpenVPN config: $OVPN_FILE"
+  else
+    echo "ERROR: No .ovpn files found in /vpn/config/"
+    exit 1
+  fi
 fi
 
 # Create TUN device if it doesn't exist

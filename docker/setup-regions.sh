@@ -135,7 +135,9 @@ EOF
   PORT=$((PORT + 1))
 done
 
-# Write .env.regions for convenience
+# Write regions config — MCP server reads this automatically
+REGIONS_FILE="$HOME/.mcp-searxng-regions"
+echo "${REGIONS_ENV}" > "$REGIONS_FILE"
 echo "SEARXNG_REGIONS=${REGIONS_ENV}" > "$GEN_DIR/.env.regions"
 
 echo ""
@@ -144,11 +146,7 @@ echo "  $COMPOSE_FILE"
 for region in "${REGIONS[@]}"; do
   echo "  $GEN_DIR/settings-${region}.yml"
 done
-echo "  $GEN_DIR/.env.regions"
-echo ""
-echo "Set this environment variable before starting the MCP server:"
-echo ""
-echo "  export SEARXNG_REGIONS=\"${REGIONS_ENV}\""
+echo "  $REGIONS_FILE (MCP server reads this automatically)"
 echo ""
 echo "Start the region containers:"
 echo ""
