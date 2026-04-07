@@ -20,13 +20,42 @@ fi
 OVPN_PID=""
 SOCKS_PID=""
 
+find_auth_file() {
+  local ovpn_file="$1"
+  local config_dir
+  config_dir="$(dirname "$ovpn_file")"
+  local profile_name
+  profile_name="$(basename "$ovpn_file" .ovpn)"
+
+  # Explicit AUTH_FILE takes priority
+  if [ -n "$AUTH_FILE" ] && [ -f "$AUTH_FILE" ]; then
+    echo "$AUTH_FILE"
+    return
+  fi
+
+  # Profile-specific auth (e.g. uk2575.nordvpn.com.udp.auth)
+  if [ -f "$config_dir/${profile_name}.auth" ]; then
+    echo "$config_dir/${profile_name}.auth"
+    return
+  fi
+
+  # Shared default auth
+  if [ -f "$config_dir/default.auth" ]; then
+    echo "$config_dir/default.auth"
+    return
+  fi
+}
+
 start_vpn() {
   local ovpn_file="$1"
   local ovpn_args="--config $ovpn_file --verb 3 --connect-retry-max 3"
 
-  # Add auth file if provided and exists
-  if [ -n "$AUTH_FILE" ] && [ -f "$AUTH_FILE" ]; then
-    ovpn_args="$ovpn_args --auth-user-pass $AUTH_FILE"
+  # Auto-detect auth file
+  local auth_file
+  auth_file="$(find_auth_file "$ovpn_file")"
+  if [ -n "$auth_file" ]; then
+    ovpn_args="$ovpn_args --auth-user-pass $auth_file"
+    echo "Using auth file: $auth_file"
   fi
 
   local ovpn_log="/tmp/openvpn.log"
