@@ -8,8 +8,9 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { handleSearch, handleEngines, handleVpnRegions } from "./tools/index.js";
+import { handleSearch, handleImageSearch, handleEngines, handleVpnRegions } from "./tools/index.js";
 import type { SearchArgs } from "./tools/search.js";
+import type { ImageSearchArgs } from "./tools/image-search.js";
 import { hasRegions } from "./utils/region-resolver.js";
 
 const server = new Server(
@@ -96,6 +97,54 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: "searxng_image_search",
+      description:
+        "Reverse image search: find where an image appears online, discover visually similar images, " +
+        "or identify the source of an image. Provide a publicly accessible image URL and SearXNG will " +
+        "query reverse image search engines (TinEye, Google Images, etc.) to find matches. " +
+        "The image URL is passed as the search query to SearXNG's online_url_search processor, " +
+        "which routes it to engines that support reverse image lookup.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          image_url: {
+            type: "string",
+            description:
+              "The publicly accessible URL of the image to search for " +
+              "(e.g. https://example.com/photo.jpg). Must be HTTP or HTTPS.",
+          },
+          engines: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              'Reverse image search engines to use (e.g. ["tineye", "google images"]). ' +
+              "Defaults to TinEye and Google Images. " +
+              "Use searxng_engines to see all available engines.",
+          },
+          max_results: {
+            type: "number",
+            description:
+              "Maximum number of results to return (default 20, max 100).",
+          },
+          safesearch: {
+            type: "number",
+            description:
+              "Safe search level: 0 (off), 1 (moderate), 2 (strict).",
+          },
+          ...(hasRegions()
+            ? {
+                region: {
+                  type: "string",
+                  description:
+                    "VPN exit region for this search. Use searxng_vpn_regions to see available regions.",
+                },
+              }
+            : {}),
+        },
+        required: ["image_url"],
+      },
+    },
+    {
       name: "searxng_engines",
       description:
         "List available search engines on the SearXNG instance, grouped by category. " +
@@ -131,6 +180,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (name) {
     case "searxng_search":
       return handleSearch(args as unknown as SearchArgs);
+    case "searxng_image_search":
+      return handleImageSearch(args as unknown as ImageSearchArgs);
     case "searxng_engines":
       return handleEngines();
     case "searxng_vpn_regions":
