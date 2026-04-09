@@ -70,6 +70,10 @@ engines:
   - name: semantic scholar
     disabled: false
 
+  # -- Reverse image search --
+  - name: tineye
+    disabled: false
+
   # -- Regional --
   - name: naver
     disabled: false

@@ -115,6 +115,25 @@ export function validateRegion(region: string): string {
   return trimmed;
 }
 
+export function validateImageUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    throw new Error("image_url must not be empty");
+  }
+  if (
+    !trimmed.startsWith("http://") &&
+    !trimmed.startsWith("https://")
+  ) {
+    throw new Error(
+      "image_url must be an HTTP or HTTPS URL (e.g. https://example.com/photo.jpg)"
+    );
+  }
+  if (trimmed.length > 4000) {
+    throw new Error("image_url must be 4000 characters or fewer");
+  }
+  return trimmed;
+}
+
 export function getSearxngUrl(): string {
   const url = process.env.SEARXNG_URL || "http://localhost:8080";
   const trimmed = url.trim().replace(/\/+$/, "");
