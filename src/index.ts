@@ -8,10 +8,8 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { handleSearch, handleImageSearch, handleUploadImage, handleEngines, handleVpnRegions } from "./tools/index.js";
+import { handleSearch, handleEngines, handleVpnRegions } from "./tools/index.js";
 import type { SearchArgs } from "./tools/search.js";
-import type { ImageSearchArgs } from "./tools/image-search.js";
-import type { UploadImageArgs } from "./tools/upload-image.js";
 import { hasRegions } from "./utils/region-resolver.js";
 
 const server = new Server(
@@ -30,7 +28,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         "Supports engine-native operators — Google operators (site:, intitle:, filetype:, " +
         '"exact phrase", before:/after:) work when Google is in the engine list. ' +
         "Use the engines parameter to target specific engines, or categories to search " +
-        "videos, images, files, news, science, music, or social media.",
+        "videos, images, files, news, science, music, or social media. " +
+        "You can also pass an image URL as the query to trace where an image already appears online — " +
+        "engines will text-match pages whose HTML embeds that exact URL. Note this is not visual " +
+        "similarity matching; it only finds images that are already indexed on other pages.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -98,87 +99,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
-      name: "searxng_image_search",
-      description:
-        "Reverse image search: find where an image appears online, discover visually similar images, " +
-        "or identify the source of an image. Provide a publicly accessible image URL and SearXNG will " +
-        "query reverse image search engines (TinEye, Google Images, etc.) to find matches. " +
-        "The image URL is passed as the search query to SearXNG's online_url_search processor, " +
-        "which routes it to engines that support reverse image lookup.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {
-          image_url: {
-            type: "string",
-            description:
-              "The publicly accessible URL of the image to search for " +
-              "(e.g. https://example.com/photo.jpg). Must be HTTP or HTTPS.",
-          },
-          engines: {
-            type: "array",
-            items: { type: "string" },
-            description:
-              'Reverse image search engines to use (e.g. ["tineye", "google images"]). ' +
-              "Defaults to TinEye and Google Images. " +
-              "Use searxng_engines to see all available engines.",
-          },
-          max_results: {
-            type: "number",
-            description:
-              "Maximum number of results to return (default 20, max 100).",
-          },
-          safesearch: {
-            type: "number",
-            description:
-              "Safe search level: 0 (off), 1 (moderate), 2 (strict).",
-          },
-          ...(hasRegions()
-            ? {
-                region: {
-                  type: "string",
-                  description:
-                    "VPN exit region for this search. Use searxng_vpn_regions to see available regions.",
-                },
-              }
-            : {}),
-        },
-        required: ["image_url"],
-      },
-    },
-    {
-      name: "searxng_upload_image",
-      description:
-        "Upload an image to a temporary public URL (via Litterbox/catbox.moe) so it can be used " +
-        "with searxng_image_search for reverse image search. No authentication required. " +
-        "The image is hosted temporarily and automatically deleted after the chosen expiry. " +
-        "Workflow: upload image here → get public URL → pass URL to searxng_image_search.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {
-          image_data: {
-            type: "string",
-            description:
-              "Base64-encoded image data. Can be raw base64 or a data URI " +
-              "(e.g. data:image/png;base64,iVBOR...). " +
-              "Supports JPEG, PNG, GIF, WebP, BMP, and TIFF.",
-          },
-          expiry: {
-            type: "string",
-            description:
-              'How long to keep the image: "1h", "12h", "24h", or "72h" (default "1h"). ' +
-              "Use the shortest expiry that fits your needs.",
-          },
-          filename: {
-            type: "string",
-            description:
-              "Optional filename (e.g. \"photo.jpg\"). If omitted, the filename is " +
-              "auto-generated from the detected image type.",
-          },
-        },
-        required: ["image_data"],
-      },
-    },
-    {
       name: "searxng_engines",
       description:
         "List available search engines on the SearXNG instance, grouped by category. " +
@@ -214,10 +134,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (name) {
     case "searxng_search":
       return handleSearch(args as unknown as SearchArgs);
-    case "searxng_image_search":
-      return handleImageSearch(args as unknown as ImageSearchArgs);
-    case "searxng_upload_image":
-      return handleUploadImage(args as unknown as UploadImageArgs);
     case "searxng_engines":
       return handleEngines();
     case "searxng_vpn_regions":
