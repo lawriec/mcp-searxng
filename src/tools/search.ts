@@ -10,6 +10,11 @@ import {
   validateSafesearch,
   validateLanguage,
   validateRegion,
+  validateSite,
+  validateFiletype,
+  validateDateParam,
+  validateInurl,
+  validateIntitle,
 } from "../utils/validators.js";
 import { resolveRegionUrl } from "../utils/region-resolver.js";
 
@@ -23,6 +28,81 @@ export interface SearchArgs {
   max_results?: number;
   safesearch?: number;
   region?: string;
+  site?: string;
+  filetype?: string;
+  after?: string;
+  before?: string;
+  inurl?: string;
+  intitle?: string;
+}
+
+interface OperatorArgs {
+  site?: string;
+  filetype?: string;
+  after?: string;
+  before?: string;
+  inurl?: string;
+  intitle?: string;
+}
+
+const OPERATOR_SUPPORTED_ENGINES: Record<string, string[] | null> = {
+  site: null,
+  filetype: ["google", "bing", "duckduckgo", "brave", "yahoo"],
+  after: ["google", "bing"],
+  before: ["google", "bing"],
+  inurl: ["google"],
+  intitle: ["google", "bing", "brave", "yahoo"],
+};
+
+function resolveEngineRestrictions(
+  operators: OperatorArgs,
+  userEngines: string[] | undefined
+): { engines: string[] | undefined; restrictions: string[] } {
+  const restrictions: string[] = [];
+  let resolved: string[] | undefined = undefined;
+
+  for (const [op, supportedEngines] of Object.entries(OPERATOR_SUPPORTED_ENGINES)) {
+    if (!(operators as Record<string, unknown>)[op]) continue;
+    if (supportedEngines === null) continue;
+
+    if (resolved === undefined) {
+      resolved = [...supportedEngines];
+    } else {
+      resolved = resolved.filter((e) => supportedEngines.includes(e));
+    }
+    restrictions.push(`${op} requires: ${supportedEngines.join(", ")}`);
+  }
+
+  if (resolved !== undefined && userEngines) {
+    const intersected = userEngines.filter((e) => resolved!.includes(e));
+    if (intersected.length === 0) {
+      const operatorsUsed = restrictions.map((r) => r.split(" ")[0]).join(", ");
+      throw new Error(
+        `Cannot use ${operatorsUsed} operator(s): none of the specified engines ` +
+          `(${userEngines.join(", ")}) support them. ${restrictions.join("; ")}.`
+      );
+    }
+    resolved = intersected;
+  } else if (resolved !== undefined && resolved.length === 0) {
+    const operatorsUsed = restrictions.map((r) => r.split(" ")[0]).join(", ");
+    throw new Error(
+      `Cannot combine ${operatorsUsed} operators: no engine supports all of them. ` +
+        `${restrictions.join("; ")}.`
+    );
+  }
+
+  return { engines: resolved ?? userEngines, restrictions };
+}
+
+function buildOperatorQuery(query: string, operators: OperatorArgs): string {
+  const parts = [query];
+  if (operators.site) parts.push(`site:${operators.site}`);
+  if (operators.filetype) parts.push(`filetype:${operators.filetype}`);
+  if (operators.after) parts.push(`after:${operators.after}`);
+  if (operators.before) parts.push(`before:${operators.before}`);
+  if (operators.inurl) parts.push(`inurl:${operators.inurl}`);
+  if (operators.intitle) parts.push(`intitle:${operators.intitle}`);
+  return parts.join(" ");
 }
 
 const DEFAULT_MAX_RESULTS = 20;
@@ -51,8 +131,37 @@ export async function handleSearch(args: SearchArgs): Promise<CallToolResult> {
     const region = args.region ? validateRegion(args.region) : undefined;
     const baseUrlOverride = region ? resolveRegionUrl(region) : undefined;
 
+    const site = args.site ? validateSite(args.site) : undefined;
+    const filetype = args.filetype ? validateFiletype(args.filetype) : undefined;
+    const after = args.after ? validateDateParam(args.after, "after") : undefined;
+    const before = args.before
+      ? validateDateParam(args.before, "before")
+      : undefined;
+    const inurl = args.inurl ? validateInurl(args.inurl) : undefined;
+    const intitle = args.intitle ? validateIntitle(args.intitle) : undefined;
+
+    const operatorArgs: OperatorArgs = {
+      site,
+      filetype,
+      after,
+      before,
+      inurl,
+      intitle,
+    };
+    const { engines: resolvedEngines, restrictions } =
+      resolveEngineRestrictions(operatorArgs, engines);
+    const modifiedQuery = buildOperatorQuery(query, operatorArgs);
+
     const response = await searxngSearch(
-      { query, engines, categories, language, time_range, pageno, safesearch },
+      {
+        query: modifiedQuery,
+        engines: resolvedEngines,
+        categories,
+        language,
+        time_range,
+        pageno,
+        safesearch,
+      },
       baseUrlOverride
     );
 
@@ -66,8 +175,8 @@ export async function handleSearch(args: SearchArgs): Promise<CallToolResult> {
       return { content: [{ type: "text" as const, text: msg }] };
     }
 
-    const engineList = engines
-      ? engines.join(", ")
+    const engineList = resolvedEngines
+      ? resolvedEngines.join(", ")
       : "default engines";
 
     const results = truncated.map((r) => ({
@@ -87,6 +196,10 @@ export async function handleSearch(args: SearchArgs): Promise<CallToolResult> {
       text += ` — ${response.number_of_results} total available`;
     }
     text += ":\n";
+
+    if (restrictions.length > 0) {
+      text += `\n[Engines restricted: ${resolvedEngines!.join(", ")} — ${restrictions.join("; ")}]\n`;
+    }
 
     if (response.suggestions.length > 0) {
       text += `\nSuggestions: ${JSON.stringify(response.suggestions)}\n`;

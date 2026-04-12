@@ -25,8 +25,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         "Search the web using a self-hosted SearXNG meta-search engine. " +
         "Queries multiple search engines (Google, Bing, Brave, DuckDuckGo, Yahoo, etc.) simultaneously " +
         "and returns aggregated results with engine attribution. " +
-        "Supports engine-native operators — Google operators (site:, intitle:, filetype:, " +
-        '"exact phrase", before:/after:) work when Google is in the engine list. ' +
+        "Supports structured search operators (site, filetype, after, before, inurl, intitle) " +
+        "as dedicated parameters — some are engine-specific and will auto-restrict engines when used " +
+        "(see parameter descriptions). " +
         "Use the engines parameter to target specific engines, or categories to search " +
         "videos, images, files, news, science, music, or social media. " +
         "You can also pass an image URL as the query to trace where an image already appears online — " +
@@ -82,6 +83,47 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: "number",
             description:
               "Safe search level: 0 (off), 1 (moderate), 2 (strict).",
+          },
+          site: {
+            type: "string",
+            description:
+              'Restrict results to a specific domain (e.g. "example.com", "docs.python.org"). ' +
+              "Works on all engines.",
+          },
+          filetype: {
+            type: "string",
+            description:
+              'Filter by file type (e.g. "pdf", "docx", "csv", "xls"). ' +
+              "ENGINE-SPECIFIC: Google, Bing, DuckDuckGo, Brave, Yahoo. " +
+              "Engines are auto-restricted when this parameter is used.",
+          },
+          after: {
+            type: "string",
+            description:
+              'Only return results after this date (YYYY-MM-DD format, e.g. "2025-01-01"). ' +
+              "ENGINE-SPECIFIC: only works on Google and Bing. " +
+              "Engines are auto-restricted when this parameter is used.",
+          },
+          before: {
+            type: "string",
+            description:
+              'Only return results before this date (YYYY-MM-DD format, e.g. "2025-06-01"). ' +
+              "ENGINE-SPECIFIC: only works on Google and Bing. " +
+              "Engines are auto-restricted when this parameter is used.",
+          },
+          inurl: {
+            type: "string",
+            description:
+              'Only results with this term in the URL (e.g. "admin", "api", "login"). ' +
+              "ENGINE-SPECIFIC: only works on Google. " +
+              "Engine is auto-restricted when this parameter is used.",
+          },
+          intitle: {
+            type: "string",
+            description:
+              'Only results with this term in the page title (e.g. "changelog", "release notes"). ' +
+              "ENGINE-SPECIFIC: Google, Bing, Brave, Yahoo. " +
+              "Engines are auto-restricted when this parameter is used.",
           },
           ...(hasRegions()
             ? {
