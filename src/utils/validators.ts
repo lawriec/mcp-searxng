@@ -115,6 +115,82 @@ export function validateRegion(region: string): string {
   return trimmed;
 }
 
+export function validateSite(site: string): string {
+  const trimmed = site.trim().toLowerCase();
+  if (!trimmed) {
+    throw new Error("site must not be empty");
+  }
+  // Strip protocol prefix if provided
+  const cleaned = trimmed.replace(/^https?:\/\//, "");
+  if (/\s/.test(cleaned)) {
+    throw new Error(
+      `Invalid site: "${site}". Must be a domain (e.g. "example.com", "docs.example.com").`
+    );
+  }
+  if (!/^[a-z0-9]([a-z0-9\-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)*$/.test(cleaned)) {
+    throw new Error(
+      `Invalid site: "${site}". Must be a domain (e.g. "example.com", "docs.example.com").`
+    );
+  }
+  return cleaned;
+}
+
+export function validateFiletype(filetype: string): string {
+  const trimmed = filetype.trim().toLowerCase().replace(/^\./, "");
+  if (!trimmed) {
+    throw new Error("filetype must not be empty");
+  }
+  if (!/^[a-z0-9]{1,10}$/.test(trimmed)) {
+    throw new Error(
+      `Invalid filetype: "${filetype}". Must be a file extension like "pdf", "docx", "csv".`
+    );
+  }
+  return trimmed;
+}
+
+export function validateDateParam(date: string, paramName: string): string {
+  const trimmed = date.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    throw new Error(
+      `Invalid ${paramName} date: "${date}". Must be YYYY-MM-DD format (e.g. 2025-01-01).`
+    );
+  }
+  const parsed = new Date(trimmed);
+  if (isNaN(parsed.getTime())) {
+    throw new Error(
+      `Invalid ${paramName} date: "${date}". Not a valid date.`
+    );
+  }
+  return trimmed;
+}
+
+export function validateInurl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error("inurl must not be empty");
+  }
+  if (/\s/.test(trimmed)) {
+    throw new Error(
+      `Invalid inurl: "${value}". Must be a single term without spaces.`
+    );
+  }
+  if (trimmed.length > 200) {
+    throw new Error("inurl must be 200 characters or fewer");
+  }
+  return trimmed;
+}
+
+export function validateIntitle(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error("intitle must not be empty");
+  }
+  if (trimmed.length > 200) {
+    throw new Error("intitle must be 200 characters or fewer");
+  }
+  return trimmed;
+}
+
 export function getSearxngUrl(): string {
   const url = process.env.SEARXNG_URL || "http://localhost:8080";
   const trimmed = url.trim().replace(/\/+$/, "");
