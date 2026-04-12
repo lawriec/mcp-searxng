@@ -137,6 +137,8 @@ pick_random_profile() {
 start_vpn "$OVPN_FILE"
 
 # --- Rotation loop (if enabled) ---
+CONSECUTIVE_FAILURES=0
+
 if [ -n "$ROTATE_INTERVAL_MINS" ] && [ "$ROTATE_INTERVAL_MINS" -gt 0 ] 2>/dev/null; then
   echo "VPN rotation enabled: every ${ROTATE_INTERVAL_MINS} minutes"
   while true; do
@@ -152,18 +154,38 @@ if [ -n "$ROTATE_INTERVAL_MINS" ] && [ "$ROTATE_INTERVAL_MINS" -gt 0 ] 2>/dev/nu
       echo "Rotating VPN to: $(basename "$NEW_PROFILE")"
       stop_vpn
       start_vpn "$NEW_PROFILE"
+      CONSECUTIVE_FAILURES=0
     else
-      # A VPN process died unexpectedly
-      echo "A VPN process exited unexpectedly, shutting down..."
+      # A VPN process died unexpectedly — try reconnecting
+      CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
+      if [ "$CONSECUTIVE_FAILURES" -ge 3 ]; then
+        echo "3 consecutive VPN failures, exiting..."
+        kill $SLEEP_PID 2>/dev/null || true
+        stop_vpn
+        exit 1
+      fi
+      echo "VPN process died (failure $CONSECUTIVE_FAILURES/3), reconnecting..."
       kill $SLEEP_PID 2>/dev/null || true
       stop_vpn
-      exit 1
+      NEW_PROFILE=$(pick_random_profile)
+      echo "Reconnecting with: $(basename "$NEW_PROFILE")"
+      start_vpn "$NEW_PROFILE"
     fi
   done
 else
-  # No rotation — exit if either process dies
-  wait -n $OVPN_PID $SOCKS_PID 2>/dev/null || true
-  echo "A process exited, shutting down..."
-  kill $OVPN_PID $SOCKS_PID 2>/dev/null || true
-  exit 1
+  # No rotation — reconnect on failure, exit after 3 consecutive failures
+  while true; do
+    wait -n $OVPN_PID $SOCKS_PID 2>/dev/null || true
+    CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
+    if [ "$CONSECUTIVE_FAILURES" -ge 3 ]; then
+      echo "3 consecutive VPN failures, exiting..."
+      stop_vpn
+      exit 1
+    fi
+    echo "VPN process died (failure $CONSECUTIVE_FAILURES/3), reconnecting..."
+    stop_vpn
+    NEW_PROFILE=$(pick_random_profile)
+    echo "Reconnecting with: $(basename "$NEW_PROFILE")"
+    start_vpn "$NEW_PROFILE"
+  done
 fi

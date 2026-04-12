@@ -8,7 +8,7 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { handleSearch, handleEngines, handleVpnRegions } from "./tools/index.js";
+import { handleSearch, handleVpnRegions } from "./tools/index.js";
 import type { SearchArgs } from "./tools/search.js";
 import { hasRegions } from "./utils/region-resolver.js";
 
@@ -26,9 +26,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         "Queries multiple search engines (Google, Bing, Brave, DuckDuckGo, Yahoo, etc.) simultaneously " +
         "and returns aggregated results with engine attribution. " +
         "Supports structured search operators (site, filetype, after, before, inurl, intitle) " +
-        "as dedicated parameters — some are engine-specific and will auto-restrict engines when used " +
-        "(see parameter descriptions). " +
-        "Use the engines parameter to target specific engines, or categories to search " +
+        "as dedicated parameters. " +
+        "Use categories to search " +
         "videos, images, files, news, science, music, or social media. " +
         "You can also pass an image URL as the query to trace where an image already appears online — " +
         "engines will text-match pages whose HTML embeds that exact URL. Note this is not visual " +
@@ -39,17 +38,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           query: {
             type: "string",
             description:
-              "Search query. Supports engine-native operators — e.g. Google operators " +
-              '(site:, intitle:, filetype:, "exact phrase", before:/after:) work when ' +
-              "Google is in the engine list. The query is passed through verbatim to each engine.",
-          },
-          engines: {
-            type: "array",
-            items: { type: "string" },
-            description:
-              'Specific engines to query (e.g. ["google", "bing", "brave"]). ' +
-              "If omitted, SearXNG uses its default enabled engine set. " +
-              "Use searxng_engines to see available engines and their categories.",
+              "Search query. The query is passed through verbatim to each engine.",
           },
           categories: {
             type: "array",
@@ -93,37 +82,27 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           filetype: {
             type: "string",
             description:
-              'Filter by file type (e.g. "pdf", "docx", "csv", "xls"). ' +
-              "ENGINE-SPECIFIC: Google, Bing, DuckDuckGo, Brave, Yahoo. " +
-              "Engines are auto-restricted when this parameter is used.",
+              'Filter by file type (e.g. "pdf", "docx", "csv", "xls").',
           },
           after: {
             type: "string",
             description:
-              'Only return results after this date (YYYY-MM-DD format, e.g. "2025-01-01"). ' +
-              "ENGINE-SPECIFIC: only works on Google and Bing. " +
-              "Engines are auto-restricted when this parameter is used.",
+              'Only return results after this date (YYYY-MM-DD format, e.g. "2025-01-01").',
           },
           before: {
             type: "string",
             description:
-              'Only return results before this date (YYYY-MM-DD format, e.g. "2025-06-01"). ' +
-              "ENGINE-SPECIFIC: only works on Google and Bing. " +
-              "Engines are auto-restricted when this parameter is used.",
+              'Only return results before this date (YYYY-MM-DD format, e.g. "2025-06-01").',
           },
           inurl: {
             type: "string",
             description:
-              'Only results with this term in the URL (e.g. "admin", "api", "login"). ' +
-              "ENGINE-SPECIFIC: only works on Google. " +
-              "Engine is auto-restricted when this parameter is used.",
+              'Only results with this term in the URL (e.g. "admin", "api", "login").',
           },
           intitle: {
             type: "string",
             description:
-              'Only results with this term in the page title (e.g. "changelog", "release notes"). ' +
-              "ENGINE-SPECIFIC: Google, Bing, Brave, Yahoo. " +
-              "Engines are auto-restricted when this parameter is used.",
+              'Only results with this term in the page title (e.g. "changelog", "release notes").',
           },
           ...(hasRegions()
             ? {
@@ -138,18 +117,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             : {}),
         },
         required: ["query"],
-      },
-    },
-    {
-      name: "searxng_engines",
-      description:
-        "List available search engines on the SearXNG instance, grouped by category. " +
-        "Shows which engines are enabled and their categories. " +
-        "Use this to discover what engines are available before searching, " +
-        "or to verify the SearXNG instance is running and healthy.",
-      inputSchema: {
-        type: "object" as const,
-        properties: {},
       },
     },
     ...(hasRegions()
@@ -176,8 +143,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (name) {
     case "searxng_search":
       return handleSearch(args as unknown as SearchArgs);
-    case "searxng_engines":
-      return handleEngines();
     case "searxng_vpn_regions":
       return handleVpnRegions();
     default:
